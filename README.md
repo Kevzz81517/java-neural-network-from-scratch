@@ -1,11 +1,6 @@
 # java-neural-network-from-scratch
 Creating Object Oriented Neural Network For Educational &amp; Understanding Purpose Only
 
-
-Hello All, 
-
-I am a Software Developer, who is highly interested in Neural Networks.
-
 I have learned creating Neural Networks using multiple libraries, but that never gave me feel of satisfaction. Also, there are many codes and tutorials available which explains neural networks in deep or try to code neural network from scratch but I noticed that in process of making efficient and lesser code, they compromise understandability.
 
 So, I thought to create Neural Network from Scratch with completely Object Oriented approach. I am trying to make the code such that, you can understand the components and configurations just by looking over the Java POJOs.
