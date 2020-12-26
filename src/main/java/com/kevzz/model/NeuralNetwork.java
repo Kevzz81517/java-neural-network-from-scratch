@@ -57,7 +57,7 @@ import lombok.Getter;
 						newNodeValue += (currentNeuron.getWeights()[j] * neurons[j].getValue());
 					}
 					newNodeValue = newNodeValue + currentNeuron.getBias();
-					newNodeValue = currentLayer.getActivationFunctionType().calculate(newNodeValue);
+					newNodeValue = currentLayer.getActivationFunction().calculate(newNodeValue);
 					currentNeuron.setValue(newNodeValue);
 				}
 			}
@@ -74,7 +74,8 @@ import lombok.Getter;
 			for (int i = 0; i < outputNeurons.length; i++) {
 
 				double errorDiff = outputNeurons[i].getValue() - outputs[i];
-				double gradient = errorDiff * outputNeurons[i].getValue() * (1 - outputNeurons[i].getValue());
+				double gradient =
+					errorDiff * this.getOutputLayer().getActivationFunction().gradient(outputNeurons[i].getValue());
 				outputNeurons[i].setGradient(gradient);
 
 				for (int j = 0; j < outputNeurons[i].getWeights().length; j++) {
@@ -90,7 +91,8 @@ import lombok.Getter;
 					NonInputNeuron currentNeuron = (NonInputNeuron) layers[i].getNeurons()[j];
 					double totalNextLayersGradient = sumGradient(j, i + 1);
 					double value = currentNeuron.getValue();
-					double errorDiff = (totalNextLayersGradient) * (value * (1 - value));
+					double currentGradient = ((NonInputLayer) layers[i]).getActivationFunction().gradient(value);
+					double errorDiff = (totalNextLayersGradient) * currentGradient;
 					currentNeuron.setGradient(errorDiff);
 					for (int k = 0; k < currentNeuron.getWeights().length; k++) {
 						double error = errorDiff * layers[i - 1].getNeurons()[k].getValue();
