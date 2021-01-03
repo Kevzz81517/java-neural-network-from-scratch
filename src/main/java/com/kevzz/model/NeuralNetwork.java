@@ -1,5 +1,6 @@
 package com.kevzz.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kevzz.configuration.NeuralNetworkInitialConfiguration;
 import com.kevzz.exception.NeuralNetworkException;
 import com.kevzz.model.layer.InputLayer;
@@ -7,16 +8,23 @@ import com.kevzz.model.layer.Layer;
 import com.kevzz.model.layer.NonInputLayer;
 import com.kevzz.model.node.Neuron;
 import com.kevzz.model.node.NonInputNeuron;
-import lombok.Getter;
+import lombok.*;
 
-@Getter public class NeuralNetwork {
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
+@EqualsAndHashCode
+public class NeuralNetwork {
 
-	private final Layer[] layers;
+	private Layer[] layers;
 
+	@JsonIgnore
 	public InputLayer getInputLayer() {
 		return (InputLayer) this.layers[0];
 	}
 
+	@JsonIgnore
 	public NonInputLayer getOutputLayer() {
 		return (NonInputLayer) this.layers[this.layers.length - 1];
 	}
@@ -117,6 +125,7 @@ import lombok.Getter;
 		backward(outputs, learningRate);
 	}
 
+	@JsonIgnore
 	public float sumGradient(int n_index, int currentLayerIndex) {
 		float totalGradient = 0;
 		NonInputLayer currentLayer = (NonInputLayer) layers[currentLayerIndex];

@@ -2,14 +2,18 @@ package com.kevzz.model.layer;
 
 import com.kevzz.configuration.NonInputLayerConfiguration;
 import com.kevzz.type.ActivationFunctionType;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+
+import java.io.Serializable;
 
 @Getter
 @Setter
-public class NonInputLayer extends Layer {
+@NoArgsConstructor
+@ToString
+@EqualsAndHashCode(callSuper = true)
+public class NonInputLayer extends Layer implements Serializable {
 
-	private final ActivationFunctionType activationFunction;
+	private ActivationFunctionType activationFunction;
 
 	public NonInputLayer(NonInputLayerConfiguration currentLayerConfiguration, Layer previousLayer, ActivationFunctionType activationFunction) {
 		super(currentLayerConfiguration, previousLayer);

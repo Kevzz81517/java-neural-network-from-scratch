@@ -1,19 +1,33 @@
 package com.kevzz.model.layer;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.kevzz.configuration.InputLayerConfiguration;
 import com.kevzz.configuration.NonInputLayerConfiguration;
 import com.kevzz.model.node.InputNeuron;
 import com.kevzz.model.node.Neuron;
 import com.kevzz.model.node.NonInputNeuron;
-import lombok.Getter;
+import lombok.*;
+
+import java.io.Serializable;
 
 import static com.kevzz.util.RandomDoubleGeneratorUtility.generateRandomDoubleArray;
 
-@Getter public class Layer {
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
+@EqualsAndHashCode
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = "@class")
+@JsonSubTypes({
+	@JsonSubTypes.Type(value=InputLayer.class),
+	@JsonSubTypes.Type(value=NonInputLayer.class),
+})
+public abstract class Layer implements Serializable {
 
-	private final Neuron[] neurons;
+	private Neuron[] neurons;
 
-	private final Layer previousLayer;
+	private Layer previousLayer;
 
 	public Layer(NonInputLayerConfiguration currentLayerConfiguration, Layer previousLayer) {
 		Neuron[] neurons = new NonInputNeuron[currentLayerConfiguration.getNeuronCount()];
