@@ -1,5 +1,7 @@
 package com.kevzz;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kevzz.configuration.InputLayerConfiguration;
 import com.kevzz.configuration.NeuralNetworkInitialConfiguration;
 import com.kevzz.configuration.NonInputLayerConfiguration;
@@ -96,13 +98,13 @@ public class Application {
 			System.out.printf("%s Hidden Layer -> Nodes : %d, Bias : %f, Activation : %s\n",
 				NumberToRankConverterUtility.process(i), hiddenLayerConfiguration.getNeuronCount(),
 				hiddenLayerConfiguration.getBias(),
-				hiddenLayerConfiguration.getActivationFunctionType().getDisplayName());
+				hiddenLayerConfiguration.getActivationFunction().getDisplayName());
 			i++;
 		}
 		System.out.printf("Output Layer -> Nodes : %d, Bias : %f, Activation : %s\n",
 			neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getNeuronCount(),
 			neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getBias(),
-			neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getActivationFunctionType()
+			neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getActivationFunction()
 				.getDisplayName());
 		System.out.println("-----------------------------------------------------------------------------------------");
 
@@ -176,6 +178,21 @@ public class Application {
 		}
 
 		System.out.println("-----------------------------------------------");
+
+		ObjectMapper objectMapper = new ObjectMapper();
+
+		try {
+
+			String neuralNetworkStr = objectMapper.writeValueAsString(neuralNetwork);
+
+			NeuralNetwork newNeuralNetwork = objectMapper.readValue(neuralNetworkStr, NeuralNetwork.class);
+
+		} catch (JsonProcessingException e) {
+
+			e.printStackTrace();
+		}
+
+
 
 	}
 }

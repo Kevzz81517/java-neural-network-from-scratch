@@ -34,7 +34,6 @@ public abstract class Layer implements Serializable {
 		for (int i = 0; i < neurons.length; i++) {
 			double[] weights = generateRandomDoubleArray(previousLayer.getNeurons().length);
 			double[] cacheWeights = new double[previousLayer.getNeurons().length];
-			double[] weightGradients = new double[previousLayer.getNeurons().length];
 			neurons[i] = new NonInputNeuron(weights, currentLayerConfiguration.getBias(), cacheWeights);
 		}
 		this.neurons = neurons;

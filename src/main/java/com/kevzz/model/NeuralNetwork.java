@@ -37,13 +37,13 @@ public class NeuralNetwork {
 		for (int i = 1; i < neuralNetworkInitialConfiguration.getHiddenLayersConfigurations().size() + 1; i++) {
 			layers[i] = new NonInputLayer(neuralNetworkInitialConfiguration.getHiddenLayersConfigurations().get(i - 1),
 				layers[i - 1], neuralNetworkInitialConfiguration.getHiddenLayersConfigurations().get(i - 1)
-				.getActivationFunctionType());
+				.getActivationFunction());
 		}
 
 		layers[neuralNetworkInitialConfiguration.getHiddenLayersConfigurations().size() + 1] =
 			new NonInputLayer(neuralNetworkInitialConfiguration.getOutputLayerConfiguration(),
 				layers[neuralNetworkInitialConfiguration.getHiddenLayersConfigurations().size()],
-				neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getActivationFunctionType());
+				neuralNetworkInitialConfiguration.getOutputLayerConfiguration().getActivationFunction());
 
 		this.layers = layers;
 	}

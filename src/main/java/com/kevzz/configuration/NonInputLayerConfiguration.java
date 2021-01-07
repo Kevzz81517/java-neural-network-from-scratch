@@ -1,15 +1,14 @@
 package com.kevzz.configuration;
 
 import com.kevzz.type.ActivationFunctionType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
-@AllArgsConstructor @RequiredArgsConstructor @Getter public class NonInputLayerConfiguration {
+@AllArgsConstructor @Getter @Setter @NoArgsConstructor public class NonInputLayerConfiguration {
 
-	private final int neuronCount;
+	private int neuronCount;
 
-	private final ActivationFunctionType activationFunctionType;
+	private ActivationFunctionType activationFunction;
 
 	private double bias;
+
 }

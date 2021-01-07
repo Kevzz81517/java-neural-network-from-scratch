@@ -7,9 +7,7 @@ import { ReactFlowProvider } from 'react-flow-renderer';
 
 
 ReactDOM.render(
-  <ReactFlowProvider>
-    <App />
-  </ReactFlowProvider>,
+    <App />,
   document.getElementById('root')
 );
 

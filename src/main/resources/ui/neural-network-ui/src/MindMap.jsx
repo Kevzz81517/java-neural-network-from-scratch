@@ -10,9 +10,7 @@ import Title from 'antd/lib/typography/Title';
 
 
 function MindMap(props) {
-  
-  console.log(props);
-  
+    
   const onLoad = (graph) => {
     setTimeout(() => graph.fitView())
   };
