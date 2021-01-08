@@ -24,7 +24,19 @@ const trainNeuralNetwork = (trainingRequest) => {
   });
 }
 
+const testNeuralNetwork = (testingRequest) => {
+  return fetch(API_BASE_URL + '/neural-network/test', {
+    method: POST,
+    body: JSON.stringify(testingRequest),
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+  });
+}
+
 export {
   configureNeuralNetwork,
-  trainNeuralNetwork
+  trainNeuralNetwork,
+  testNeuralNetwork
 }

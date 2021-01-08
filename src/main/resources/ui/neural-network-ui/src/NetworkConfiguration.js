@@ -2,14 +2,20 @@ import './App.css';
 import { Form, Button, Select, Drawer, Card, InputNumber, Row, Col, Switch } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import ReactFlow, { useStoreState } from "react-flow-renderer";
 import { dagre, numberToRankConverter } from './util';
 import uuid from 'react-uuid'
 import Text from 'antd/lib/typography/Text';
 import Title from 'antd/lib/typography/Title';
 import MindMap from './MindMap';
-import {InputLayerConfiguration, HiddenLayerConfiguration, OutputLayerConfiguration, NeuralNetworkConfiguration, TrainingRequest} from './model';
-import {configureNeuralNetwork, trainNeuralNetwork} from './API';
+import {
+  InputLayerConfiguration, 
+  HiddenLayerConfiguration, 
+  OutputLayerConfiguration, 
+  NeuralNetworkConfiguration, 
+  TrainingRequest,
+  TestingRequest
+} from './model';
+import {configureNeuralNetwork, trainNeuralNetwork, testNeuralNetwork} from './API';
 
 const ACTIVATION_FUNCTION_TYPE = {
   SIGMOID: 'Sigmoid',
@@ -27,6 +33,8 @@ function NetworkConfiguration() {
   const [ neuralNetworkConfigurationForm ] = Form.useForm();
 
   const [ trainingForm ] = Form.useForm();
+
+  const [ testingForm ] = Form.useForm();
 
   
   const [ neuralNetworkConfigurationData, setNeuralNetworkConfigurationData ] = useState({
@@ -177,8 +185,8 @@ function NetworkConfiguration() {
           key,
           {
             value: layerNodes[key].data.label,
-            width: 80,
-            height: 80
+            width: 90,
+            height: 160
           }
         );
         if(layerIndex > 0) {
@@ -307,9 +315,9 @@ function NetworkConfiguration() {
         newNeuralNetworkConfigurationData.push({
           id: n.id,
           data: {
-            value: n.value ? Math.round(n.value*100)/100 : undefined,
-            gradient: n.gradient ? Math.round(n.gradient*100)/100 : undefined,
-            bias: n.bias ? Math.round(n.bias*100)/100 : undefined,
+            value: n.value !== undefined  ? (Math.round(n.value*100)/100).toString() : undefined,
+            gradient: n.gradient !== undefined ? (Math.round(n.gradient*100)/100).toString() : undefined,
+            bias: n.bias !== undefined ? (Math.round(n.bias*100)/100).toString() : undefined,
             activation: layer.activationFunction ? ACTIVATION_FUNCTION_TYPE[layer.activationFunction]: undefined
           },
           style: {
@@ -338,6 +346,16 @@ function NetworkConfiguration() {
     trainNeuralNetwork(
       TrainingRequest(model, values.epochs, values.learningRate, 
         values.trainingSet)
+      ).then(response => response.json().then((neuralNetwork => {
+        refactorAndFillGraph(neuralNetwork.layers);
+        setModel(neuralNetwork);
+      })));
+  }
+
+  const submitTestingForm = (values) => {
+
+    testNeuralNetwork(
+      TestingRequest(model, values.inputs)
       ).then(response => response.json().then((neuralNetwork => {
         refactorAndFillGraph(neuralNetwork.layers);
         setModel(neuralNetwork);
@@ -685,7 +703,57 @@ function NetworkConfiguration() {
                     </Form>
                   ): (
                     mode === MODE.TEST ? (
-                      null
+                      <Form
+                        form={testingForm}
+                        name='testingForm'
+                        onFinish={submitTestingForm}
+                      >
+                        <br />
+                        <table>
+                          <tr>
+                            {
+                              Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).map((nodeId, index) => {
+                                return (
+                                  <th>
+                                    <Text>{`Input - ${index + 1}`}</Text>
+                                  </th>
+                                )
+                              })
+                            }
+                          </tr>
+                          <br />
+                          <tr>
+                            {
+                              Array( 
+                                Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length
+                              ).fill().map((col, colIndex) => {
+                                return <td>
+                                  <Form.Item
+                                    rules={[
+                                      {
+                                        required: true,
+                                        message: ''
+                                      }
+                                    ]}
+                                    name={['inputs', colIndex]}
+                                  >
+                                    <InputNumber 
+                                      step={0.01}
+                                    />
+                                  </Form.Item>
+                                </td>
+                              })
+                            }
+                          </tr>
+                        </table>
+                        
+                        <Button 
+                          type='primary' 
+                          htmlType='submit'
+                        >
+                          Test Network
+                        </Button>
+                      </Form>
                     ) : (null)
                   )
                 }

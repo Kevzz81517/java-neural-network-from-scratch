@@ -37,10 +37,18 @@ function TrainingRequest(neuralNetwork, epochs, learningRate, trainingData) {
   }
 }
 
+function TestingRequest(neuralNetwork, inputs) {
+  return {
+    neuralNetwork,
+    inputs
+  }
+}
+
 export {
   InputLayerConfiguration,
   HiddenLayerConfiguration,
   OutputLayerConfiguration,
   NeuralNetworkConfiguration,
-  TrainingRequest
+  TrainingRequest,
+  TestingRequest
 }
