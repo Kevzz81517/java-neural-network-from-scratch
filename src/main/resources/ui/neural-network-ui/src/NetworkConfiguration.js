@@ -186,7 +186,7 @@ function NetworkConfiguration() {
           {
             value: layerNodes[key].data.label,
             width: 90,
-            height: 160
+            height: 500
           }
         );
         if(layerIndex > 0) {
@@ -429,9 +429,11 @@ function NetworkConfiguration() {
                     onChange={(value) => {
                       let inputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length;
                       if(value > inputLayerNodesLength) {
-                        addNewInputNode()
+                        for(let i = 0; i < value - inputLayerNodesLength; i++)
+                          addNewInputNode()
                       } else if(value < inputLayerNodesLength) {
-                        removeInputNode()
+                        for(let i = 0; i < inputLayerNodesLength - value; i++)
+                          removeInputNode()
                       }
                       refactorGraph()
                     }}
@@ -460,9 +462,11 @@ function NetworkConfiguration() {
                             onChange={(value) => {
                               let layerNodesLength = Object.keys(neuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes).length;
                               if(value > layerNodesLength) {
-                                addNewHiddenNode(layerIndex)
+                                for(let i = 0; i < value - layerNodesLength; i++)
+                                  addNewHiddenNode(layerIndex)
                               } else if(value < layerNodesLength) {
-                                removeHiddenNode(layerIndex)
+                                for(let i = 0; i < layerNodesLength - value; i++)
+                                  removeHiddenNode(layerIndex)
                               }
                               refactorGraph()
                             }}
@@ -525,9 +529,11 @@ function NetworkConfiguration() {
                     onChange={(value) => {
                       let outputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length;
                       if(value > outputLayerNodesLength) {
+                        for(let i = 0; i < value - outputLayerNodesLength; i++)
                         addNewOutputNode()
                       } else if(value < outputLayerNodesLength) {
-                        removeOutputNode()
+                        for(let i = 0; i < outputLayerNodesLength - value; i++)
+                          removeOutputNode()
                       }
                       refactorGraph()
                     }}

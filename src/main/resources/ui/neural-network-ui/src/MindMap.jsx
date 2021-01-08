@@ -26,7 +26,7 @@ function MindMap(props) {
               {
                 'default': (element) => {  
                   return (
-                    <Text level={4}>
+                    <Text style={{fontSize: 10}}>
                       {element.data.value ?  <><br /><b>Value</b><br />{`${element.data.value}`}</> : ''}
                       {element.data.gradient ?  <><br /><b>Gradient</b><br/>{`${element.data.gradient}`}</> : ''}
                       {element.data.activation ?  <><br /><b>Activation</b><br/>{`${element.data.activation}`}</> : ''}
@@ -44,7 +44,7 @@ function MindMap(props) {
             zoomOnScroll={true}
             zoomOnDoubleClick={true}
             contentEditable={false}
-            nodesDraggable={false}
+            nodesDraggable={true}
 
             />
           </Row>
