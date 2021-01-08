@@ -24,8 +24,16 @@ function MindMap(props) {
             elements={props.neuralNetworkData}
             nodeTypes={
               {
-                'default': (element) => { return (<div style={{ maxHeight: 80, overflowY: 'auto'}}>{element.data.level === 4 ? <Text>{element.data.label}</Text> : <Title level={element.data.level}>{element.data.label}</Title>}</div>) },
-                'output': (element) => { return (<div style={{ maxHeight: 80, overflowY: 'auto'}}>{element.data.level === 4 ? <Text>{element.data.label}</Text> : <Title level={element.data.level}>{element.data.label}</Title>}</div>) },
+                'default': (element) => {  
+                  return (
+                    <Text level={4}>
+                      {element.data.value ?  <><br /><b>Value</b><br />{`${element.data.value}`}</> : ''}
+                      {element.data.gradient ?  <><br /><b>Gradient</b><br/>{`${element.data.gradient}`}</> : ''}
+                      {element.data.activation ?  <><br /><b>Activation</b><br/>{`${element.data.activation}`}</> : ''}
+                      {element.data.bias ?  <><br /><b>Bias</b><br />{`${element.data.bias}`}</> : ''}
+                    </Text>
+                  ) 
+                },
               }
             }
             paneMoveable={true}

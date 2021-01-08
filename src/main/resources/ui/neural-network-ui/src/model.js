@@ -28,9 +28,19 @@ function NeuralNetworkConfiguration(inputLayerConfiguration, hiddenLayersConfigu
   };
 }
 
+function TrainingRequest(neuralNetwork, epochs, learningRate, trainingData) {
+  return {
+    neuralNetwork,
+    epochs,
+    learningRate,
+    trainingData
+  }
+}
+
 export {
   InputLayerConfiguration,
   HiddenLayerConfiguration,
   OutputLayerConfiguration,
-  NeuralNetworkConfiguration
+  NeuralNetworkConfiguration,
+  TrainingRequest
 }

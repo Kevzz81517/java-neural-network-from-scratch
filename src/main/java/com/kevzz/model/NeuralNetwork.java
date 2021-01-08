@@ -10,6 +10,8 @@ import com.kevzz.model.node.Neuron;
 import com.kevzz.model.node.NonInputNeuron;
 import lombok.*;
 
+import java.util.Arrays;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -77,7 +79,8 @@ public class NeuralNetwork {
 	public void backward(double[] outputs, double learningRate) {
 
 		if (outputs.length == this.getOutputLayer().getNeurons().length) {
-			NonInputNeuron[] outputNeurons = (NonInputNeuron[]) this.getOutputLayer().getNeurons();
+			NonInputNeuron[] outputNeurons =  Arrays.stream(this.getOutputLayer().getNeurons())
+				.map(neuron -> (NonInputNeuron)neuron).toArray(NonInputNeuron[]::new);
 
 			for (int i = 0; i < outputNeurons.length; i++) {
 

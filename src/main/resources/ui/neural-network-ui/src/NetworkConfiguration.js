@@ -1,5 +1,5 @@
 import './App.css';
-import { Form, Button, Select, Drawer, Card, InputNumber, Row } from 'antd';
+import { Form, Button, Select, Drawer, Card, InputNumber, Row, Col, Switch } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import ReactFlow, { useStoreState } from "react-flow-renderer";
@@ -8,17 +8,26 @@ import uuid from 'react-uuid'
 import Text from 'antd/lib/typography/Text';
 import Title from 'antd/lib/typography/Title';
 import MindMap from './MindMap';
-import {InputLayerConfiguration, HiddenLayerConfiguration, OutputLayerConfiguration, NeuralNetworkConfiguration} from './model';
-import {configureNeuralNetwork} from './API';
+import {InputLayerConfiguration, HiddenLayerConfiguration, OutputLayerConfiguration, NeuralNetworkConfiguration, TrainingRequest} from './model';
+import {configureNeuralNetwork, trainNeuralNetwork} from './API';
 
 const ACTIVATION_FUNCTION_TYPE = {
   SIGMOID: 'Sigmoid',
   RELU: 'Relu'
 }
 
+const MODE = {
+  CONFIGURABLE: 'CONFIGURABLE',
+  TRAIN: 'TRAIN',
+  TEST: 'TEST'
+}
+
 function NetworkConfiguration() {
   
   const [ neuralNetworkConfigurationForm ] = Form.useForm();
+
+  const [ trainingForm ] = Form.useForm();
+
   
   const [ neuralNetworkConfigurationData, setNeuralNetworkConfigurationData ] = useState({
     inputLayer: {
@@ -38,10 +47,17 @@ function NetworkConfiguration() {
 
   const [width, setWidth] = useState(0);
 
+  const [mode, setMode] = useState(MODE.CONFIGURABLE);
+
+  const [model, setModel] = useState();
+
+  const [trainingSet, setTrainingSet] = useState([{}]);
+
+  
   const addNewInputNode = () => {
     neuralNetworkConfigurationData.inputLayer.nodes[uuid()] = {
       data: {
-        label: ''
+        value: '',
       }
     }
     setNeuralNetworkConfigurationData({
@@ -58,7 +74,7 @@ function NetworkConfiguration() {
   const addNewOutputNode = () => {
     neuralNetworkConfigurationData.outputLayer.nodes[uuid()] = {
       data: {
-        label: ''
+        value: ''
       }
     }
     setNeuralNetworkConfigurationData({
@@ -74,11 +90,17 @@ function NetworkConfiguration() {
   }
 
   const addNewHiddenNode = (layerIndex) => {
-    neuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes[uuid()] = {
+    
+    let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
+
+    tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes[uuid()] = {
       data: {
-        label: '',
-      }
+        value: '',
+      },
     }
+    tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex]['activationFunction'] = 'SIGMOID'
+
+    setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData)
   }
 
   const removeHiddenNode = (layerIndex) => {
@@ -154,7 +176,7 @@ function NetworkConfiguration() {
         dagreGraphUtil.setNode(
           key,
           {
-            label: layerNodes[key].data.label,
+            value: layerNodes[key].data.label,
             width: 80,
             height: 80
           }
@@ -256,7 +278,7 @@ function NetworkConfiguration() {
         dagreGraphUtil.setNode(
           currentNode.id,
           {
-            label: '',
+            value: '',
             width: 80,
             height: 80
           }
@@ -285,7 +307,10 @@ function NetworkConfiguration() {
         newNeuralNetworkConfigurationData.push({
           id: n.id,
           data: {
-            label: n.value
+            value: n.value ? Math.round(n.value*100)/100 : undefined,
+            gradient: n.gradient ? Math.round(n.gradient*100)/100 : undefined,
+            bias: n.bias ? Math.round(n.bias*100)/100 : undefined,
+            activation: layer.activationFunction ? ACTIVATION_FUNCTION_TYPE[layer.activationFunction]: undefined
           },
           style: {
             width: 80,
@@ -307,201 +332,368 @@ function NetworkConfiguration() {
     setWidth(dagreGraphUtil._label.width);
 
   }
+
+  const submitTrainingForm = (values) => {
+
+    trainNeuralNetwork(
+      TrainingRequest(model, values.epochs, values.learningRate, 
+        values.trainingSet)
+      ).then(response => response.json().then((neuralNetwork => {
+        refactorAndFillGraph(neuralNetwork.layers);
+        setModel(neuralNetwork);
+      })));
+  }
   
   return (
     <Row>
-      <Button 
-          type='primary'
-          style={{position: 'fixed', left: (window.innerWidth )/2 - 150, zIndex: 999}}
-          onClick={() => {
-            const inputLayerConfiguration = InputLayerConfiguration(Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length);
-            const hiddenLayersConfigurations = neuralNetworkConfigurationData.hiddenLayers.map(hiddenLayer => HiddenLayerConfiguration(
-              Object.keys(hiddenLayer.nodes).length,
-              hiddenLayer.activationFunction,
-              hiddenLayer.bias
-            ));
-            const outputLayerConfiguration = OutputLayerConfiguration(
-              Object.keys(neuralNetworkConfigurationData.outputLayer).length,
-              neuralNetworkConfigurationData.outputLayer.activationFunction,
-              neuralNetworkConfigurationData.outputLayer.bias
-            )
-            const neuralNetworkConfiguration = NeuralNetworkConfiguration(inputLayerConfiguration, hiddenLayersConfigurations, outputLayerConfiguration);
-            configureNeuralNetwork(neuralNetworkConfiguration).then(response => response.json().then(neuralNetwork => {
-              let inputLayer = neuralNetwork.layers[0];
-              let outputLayer = neuralNetwork.layers[neuralNetwork.layers.length - 1];
-              let hiddenLayers = neuralNetwork.layers.filter((layer, index) => index > 0 && index < (neuralNetwork.layers.length - 1));
-              refactorAndFillGraph(neuralNetwork.layers);
-            }));
-          }}
-        >
-          Complete Configuration
-        </Button>
-      <Card
-        style={{
-          width: (window.innerWidth)/2 - 50
-        }}
-      >
-        <Form
-          form={neuralNetworkConfigurationForm}
-        >
-          <>
-          <Title level={3}>Input layer</Title>
-          <Form.Item
-            label='What is nodes do you want in input layer ?'
-            initialValue={1}
+      {
+        mode !== MODE.CONFIGURABLE ? 
+        (
+          <Button 
+            type='primary'
+            style={{position: 'fixed', left: (window.innerWidth )/2 - 150, zIndex: 999}}
+            onClick={() => {
+              setMode(MODE.CONFIGURABLE); 
+              setModel(undefined)
+            }}
           >
-            <InputNumber
-              defaultValue={1}
-              step={1}
-              min={1}
-              onChange={(value) => {
-                let inputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length;
-                if(value > inputLayerNodesLength) {
-                  addNewInputNode()
-                } else if(value < inputLayerNodesLength) {
-                  removeInputNode()
-                }
-                refactorGraph()
-              }}
-            />
-          </Form.Item>
-          </>
-          <Form.Item>
-              <Button type="dashed" onClick={() => addNewHiddenLayer()} block icon={<PlusOutlined />}>
-                Add Hidden Layer
-              </Button>
-          </Form.Item>
-          {
-            neuralNetworkConfigurationData.hiddenLayers.map((layer, layerIndex) => {
-              return (
-                <>
-                  <Title level={3}>{numberToRankConverter(layerIndex + 1)} hidden layer</Title>
-                  <Form.Item
-                    label={`How many nodes do you want in this layer ?`}
-                    name={`hidden-layer-config-${layerIndex}-node-count`}
-                    initialValue={1}
-                  >
-                    <InputNumber
-                      defaultValue={1}
-                      step={1}
-                      min={1}
-                      onChange={(value) => {
-                        let layerNodesLength = Object.keys(neuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes).length;
-                        if(value > layerNodesLength) {
-                          addNewHiddenNode(layerIndex)
-                        } else if(value < layerNodesLength) {
-                          removeHiddenNode(layerIndex)
-                        }
-                        refactorGraph()
-                      }}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    label={`Which activation function do you want in this layer ?`}
-                    name={`hidden-layer-config-${layerIndex}-activation`}
-                    initialValue={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
-                  >
-                    <Select
-                      value={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
-                      onChange={(value) => {
-                        let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
-                        tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction = value;
-                        setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
-                      }}
-                    >
-                      {Object.keys(ACTIVATION_FUNCTION_TYPE).map(activationFunctionOptionKey => {
-                        return <Select.Option 
-                                  value={activationFunctionOptionKey}
-                                >
-                                  {ACTIVATION_FUNCTION_TYPE[activationFunctionOptionKey]}
-                                </Select.Option>
-                      })}
-                      
-                    </Select>
-                  </Form.Item>
-                  <Form.Item
-                    label={`What is the bias you want in this layer ?`}
-                    name={`hidden-layer-config-${layerIndex}-bias`}
-                    initialValue={0}
-                  >
-                    <InputNumber
-                      value={neuralNetworkConfigurationData.hiddenLayers[layerIndex].bias}
-                      step={0.01}
-                      min={0}
-                      onChange={(value) => {
-                        let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
-                        tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex]['bias'] = value;
-                        setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
-                      }}
-                    />
-                  </Form.Item>
-                </>
-              );
-            })
-          }
-          <>
-          <Title level={3}>Output layer</Title>
-          <Form.Item
-            label='What is nodes do you want in output layer ?'
-            initialValue={1}
-          >
-            <InputNumber
-              defaultValue={1}
-              step={1}
-              min={1}
-              onChange={(value) => {
-                let outputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length;
-                if(value > outputLayerNodesLength) {
-                  addNewOutputNode()
-                } else if(value < outputLayerNodesLength) {
-                  removeOutputNode()
-                }
-                refactorGraph()
-              }}
-            />
-          </Form.Item>
-          </>
-          <Form.Item
-            label={`What is the bias you want in this layer ?`}
-            name={`hidden-layer-config-output-bias`}
-            initialValue={0}
-          >
-            <InputNumber
-              value={neuralNetworkConfigurationData.outputLayer.bias}
-              step={0.01}
-              min={0}
-              onChange={(value) => {
-                let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
-                tempNeuralNetworkConfigurationData.outputLayer['bias'] = value;
-                setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
-              }}
-            />
-          </Form.Item>
-          <Form.Item
-            label={`Which activation function do you want in this layer ?`}
-            name={`output-layer-config-output-activation`}
-            initialValue={neuralNetworkConfigurationData.outputLayer.activationFunction}
-          >
-            <Select
-              value={neuralNetworkConfigurationData.outputLayer.activationFunction}
-              onChange={(value) => {
-                let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
-                tempNeuralNetworkConfigurationData.outputLayer.activationFunction = value;
-                setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
+            Re-Configure
+          </Button>
+        ): (
+          <Button 
+              type='primary'
+              style={{position: 'fixed', left: (window.innerWidth )/2 - 150, zIndex: 999}}
+              onClick={() => {
+                const inputLayerConfiguration = InputLayerConfiguration(Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length);
+                const hiddenLayersConfigurations = neuralNetworkConfigurationData.hiddenLayers.map(hiddenLayer => HiddenLayerConfiguration(
+                  Object.keys(hiddenLayer.nodes).length,
+                  hiddenLayer.activationFunction,
+                  hiddenLayer.bias
+                ));
+                const outputLayerConfiguration = OutputLayerConfiguration(
+                  Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length,
+                  neuralNetworkConfigurationData.outputLayer.activationFunction,
+                  neuralNetworkConfigurationData.outputLayer.bias
+                )
+                const neuralNetworkConfiguration = NeuralNetworkConfiguration(inputLayerConfiguration, hiddenLayersConfigurations, outputLayerConfiguration);
+                configureNeuralNetwork(neuralNetworkConfiguration).then(response => response.json().then(neuralNetwork => {
+                  refactorAndFillGraph(neuralNetwork.layers);
+                  setModel(neuralNetwork);
+                  setMode(MODE.TRAIN);
+                }));
               }}
             >
-              {Object.keys(ACTIVATION_FUNCTION_TYPE).map(activationFunctionOptionKey => {
-                return <Select.Option 
-                          value={activationFunctionOptionKey}
+              Complete Configuration
+          </Button>
+        )
+      }
+        {
+          mode === MODE.CONFIGURABLE ? (
+            <Card
+              style={{
+                width: (window.innerWidth)/2 - 50
+              }}
+            >
+              <Form
+                form={neuralNetworkConfigurationForm}
+                name='neuralNetworkConfigurationForm'
+              >
+                <>
+                <Title level={3}>Input layer</Title>
+                <Form.Item
+                  label='How many nodes do you want in input layer ?'
+                  initialValue={1}
+                >
+                  <InputNumber
+                    value={Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length}
+                    step={1}
+                    min={1}
+                    onChange={(value) => {
+                      let inputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length;
+                      if(value > inputLayerNodesLength) {
+                        addNewInputNode()
+                      } else if(value < inputLayerNodesLength) {
+                        removeInputNode()
+                      }
+                      refactorGraph()
+                    }}
+                  />
+                </Form.Item>
+                </>
+                <Form.Item>
+                    <Button type="dashed" onClick={() => addNewHiddenLayer()} block icon={<PlusOutlined />}>
+                      Add Hidden Layer
+                    </Button>
+                </Form.Item>
+                {
+                  neuralNetworkConfigurationData.hiddenLayers.map((layer, layerIndex) => {
+                    return (
+                      <>
+                        <Title level={3}>{numberToRankConverter(layerIndex + 1)} hidden layer</Title>
+                        <Form.Item
+                          label={`How many nodes do you want in this layer ?`}
+                          name={`hidden-layer-config-${layerIndex}-node-count`}
+                          initialValue={1}
                         >
-                          {ACTIVATION_FUNCTION_TYPE[activationFunctionOptionKey]}
-                        </Select.Option>
-              })}
+                          <InputNumber
+                            value={Object.keys(neuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes).length}
+                            step={1}
+                            min={1}
+                            onChange={(value) => {
+                              let layerNodesLength = Object.keys(neuralNetworkConfigurationData.hiddenLayers[layerIndex].nodes).length;
+                              if(value > layerNodesLength) {
+                                addNewHiddenNode(layerIndex)
+                              } else if(value < layerNodesLength) {
+                                removeHiddenNode(layerIndex)
+                              }
+                              refactorGraph()
+                            }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label={`Which activation function do you want in this layer ?`}
+                          name={`hidden-layer-config-${layerIndex}-activation`}
+                          value={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
+                          initialValue={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
+                          key={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
+                        >
+                          <Select
+                            value={neuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction}
+                            onChange={(value) => {
+                              let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
+                              tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex].activationFunction = value;
+                              setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
+                            }}
+                          >
+                            {Object.keys(ACTIVATION_FUNCTION_TYPE).map(activationFunctionOptionKey => {
+                              return <Select.Option 
+                                        value={activationFunctionOptionKey}
+                                      >
+                                        {ACTIVATION_FUNCTION_TYPE[activationFunctionOptionKey]}
+                                      </Select.Option>
+                            })}
+                            
+                          </Select>
+                        </Form.Item>
+                        <Form.Item
+                          label={`What is the bias you want in this layer ?`}
+                          name={`hidden-layer-config-${layerIndex}-bias`}
+                        >
+                          <InputNumber
+                            value={neuralNetworkConfigurationData.hiddenLayers[layerIndex].bias}
+                            defaultValue={neuralNetworkConfigurationData.hiddenLayers[layerIndex].bias}
+                            step={0.01}
+                            min={0}
+                            onChange={(value) => {
+                              let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
+                              tempNeuralNetworkConfigurationData.hiddenLayers[layerIndex]['bias'] = value;
+                              setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
+                            }}
+                          />
+                        </Form.Item>
+                      </>
+                    );
+                  })
+                }
+                <>
+                <Title level={3}>Output layer</Title>
+                <Form.Item
+                  label='What is nodes do you want in output layer ?'
+                >
+                  <InputNumber
+                    value={Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length}
+                    step={1}
+                    min={1}
+                    onChange={(value) => {
+                      let outputLayerNodesLength = Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length;
+                      if(value > outputLayerNodesLength) {
+                        addNewOutputNode()
+                      } else if(value < outputLayerNodesLength) {
+                        removeOutputNode()
+                      }
+                      refactorGraph()
+                    }}
+                  />
+                </Form.Item>
+                </>
+                <Form.Item
+                  label={`What is the bias you want in this layer ?`}
+                  name={`hidden-layer-config-output-bias`}
+                >
+                  <InputNumber
+                    value={neuralNetworkConfigurationData.outputLayer.bias}
+                    defaultValue={neuralNetworkConfigurationData.outputLayer.bias}
+                    step={0.01}
+                    min={0}
+                    onChange={(value) => {
+                      let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
+                      tempNeuralNetworkConfigurationData.outputLayer['bias'] = value;
+                      setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
+                    }}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={`Which activation function do you want in this layer ?`}
+                  name={`output-layer-config-output-activation`}
+                  initialValue={neuralNetworkConfigurationData.outputLayer.activationFunction}
+                  key={neuralNetworkConfigurationData.outputLayer.activationFunction}
+                >
+                  <Select
+                    value={neuralNetworkConfigurationData.outputLayer.activationFunction}
+                    onChange={(value) => {
+                      let tempNeuralNetworkConfigurationData = {...neuralNetworkConfigurationData};
+                      tempNeuralNetworkConfigurationData.outputLayer.activationFunction = value;
+                      setNeuralNetworkConfigurationData(tempNeuralNetworkConfigurationData);
+                    }}
+                  >
+                    {Object.keys(ACTIVATION_FUNCTION_TYPE).map(activationFunctionOptionKey => {
+                      return <Select.Option 
+                                value={activationFunctionOptionKey}
+                              >
+                                {ACTIVATION_FUNCTION_TYPE[activationFunctionOptionKey]}
+                              </Select.Option>
+                    })}
+                    
+                  </Select>
+                </Form.Item>
+              </Form>
+            </Card>
+          ): (
+            <Card
+              style={{
+                width: (window.innerWidth)/2 - 50,
+                overflow: 'auto',
+              }}
+            >
+              <Col style={{ width: '100%' }}>
+                <Row justify='center'>
+                  <Row justify='space-around' style={{width: '70%'}}>
+                  Train 
+                  <Switch 
+                    checked={mode === MODE.TEST}
+                    onChange={(checked) => {setMode(checked ? MODE.TEST : MODE.TRAIN)}}
+                  />
+                  Test
+                  </Row>
+                </Row>
+                {
+                  mode === MODE.TRAIN ? (
+                    <Form
+                      form={trainingForm}
+                      name='trainingForm'
+                      onFinish={submitTrainingForm}
+                    >
+                      <br />
+                      <Form.Item>
+                        <Button type="dashed" onClick={() => {setTrainingSet([...trainingSet, {}])}} block icon={<PlusOutlined />}>
+                          Add New Training Row
+                        </Button>
+                      </Form.Item>
+                      <br />
+                      <table>
+                        <tr>
+                          {
+                            Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).map((nodeId, index) => {
+                              return (
+                                <th>
+                                  <Text>{`Input - ${index + 1}`}</Text>
+                                </th>
+                              )
+                            })
+                          }
+                          {
+                            Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).map((nodeId, index) => {
+                              return (
+                                <th>
+                                  <Text>{`Output - ${index + 1}`}</Text>
+                                </th>
+                              );
+                            })
+                          }
+                        </tr>
+                        <br />
+                        {
+                          trainingSet.map((row, rowIndex) => {
+                            return (
+                              <tr>
+                                {
+                                  Array(
+                                    Object.keys(neuralNetworkConfigurationData.outputLayer.nodes).length 
+                                    + 
+                                    Object.keys(neuralNetworkConfigurationData.inputLayer.nodes).length
+                                  ).fill().map((col, colIndex) => {
+                                    return <td>
+                                      <Form.Item
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: ''
+                                          }
+                                        ]}
+                                        name={['trainingSet', rowIndex, colIndex]}
+                                      >
+                                        <InputNumber 
+                                          step={0.01}
+                                        />
+                                      </Form.Item>
+                                    </td>
+                                  })
+                                }
+                              </tr>
+                            );
+                          })
+                        }
+                      </table>
+                      <Col>
+                        <Form.Item
+                          label='Learning Rate'
+                          rules={[
+                            {
+                              required: true,
+                              message: 'Please provide the learning rate'
+                            }
+                          ]}
+                          name='learningRate'
+                        >
+                          <InputNumber 
+                            min={0}
+                            step={0.01}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label='Training Loops'
+                          rules={[
+                            {
+                              required: true,
+                              message: 'Please provide number of training loops'
+                            }
+                          ]}
+                          name='epochs'
+                        >
+                          <InputNumber 
+                            min={0}
+                            step={1}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Button 
+                        type='primary' 
+                        htmlType='submit'
+                      >
+                        Train Network
+                      </Button>
+                    </Form>
+                  ): (
+                    mode === MODE.TEST ? (
+                      null
+                    ) : (null)
+                  )
+                }
+              </Col>
               
-            </Select>
-          </Form.Item>
-        </Form>
-      </Card>
+            </Card>
+          )
+        }
       <Card
         width={'50%'}
       >

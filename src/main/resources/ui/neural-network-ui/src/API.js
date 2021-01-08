@@ -13,6 +13,18 @@ const configureNeuralNetwork = (neuralNetworkConfiguration) => {
   });
 }
 
+const trainNeuralNetwork = (trainingRequest) => {
+  return fetch(API_BASE_URL + '/neural-network/train', {
+    method: POST,
+    body: JSON.stringify(trainingRequest),
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+  });
+}
+
 export {
-  configureNeuralNetwork
+  configureNeuralNetwork,
+  trainNeuralNetwork
 }
